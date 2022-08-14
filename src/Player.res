@@ -62,9 +62,11 @@ let runWithWithSubroute = (~seed, ~subroute: route) => {
 
 let gen = Random.gen()
 
-let rec do = () => {
+let rec do = uselessWalks => {
   Js.log(
     [
+      "useless walks:",
+      uselessWalks->Int.toString,
       "subroutes:",
       subroutes->Belt.HashSet.size->Int.toString,
       "coverage:",
@@ -72,15 +74,15 @@ let rec do = () => {
     ]->Array.joinWith(" "),
   )
 
-  if subroutes->Belt.HashSet.size < 10 {
-    //random walk
-    runWithWithSubroute(~seed=gen()->Random.getInt, ~subroute=[])->ignore
-  }
-
   let subroute = gen()->Random.getFromArray(subroutes->Belt.HashSet.toArray)
 
   switch subroute {
-  | None => Js.log("stop")
+  | None =>
+    if uselessWalks < 100 {
+      runWithWithSubroute(~seed=gen()->Random.getInt, ~subroute=[])->ignore
+      do(uselessWalks + 1)
+    }
+
   | Some(subroute) => {
       //seeded walk
       let foundNewRoutes = runWithWithSubroute(~seed=gen()->Random.getInt, ~subroute)
@@ -89,9 +91,9 @@ let rec do = () => {
         subroutes->Belt.HashSet.remove(subroute)->ignore
       }
 
-      do()
+      do(0)
     }
   }
 }
 
-do()
+do(0)
