@@ -1,0 +1,30 @@
+{
+	"name": "jernau",
+	"sources": [
+		{ "dir": "src", "subdirs": true }
+	],
+	"package-specs": [
+		{
+			"module": "commonjs",
+			"in-source": true
+		}
+	],
+	"suffix": ".mjs",
+	"package-specs": {
+		"module": "es6",
+		"in-source": true
+	},
+	"bs-dependencies": [
+		"@dusty-phillips/rescript-zora",
+		"@greenlabs/ppx-spice",
+		"@little-bonsai/licht",
+		"@little-bonsai/rescript-std",
+		"@rescript/react",
+		"@ryyppy/rescript-promise",
+		"rescript-nodejs"
+	],
+	"ppx-flags": ["@greenlabs/ppx-spice/ppx"],
+	"bsc-flags": ["-bs-D", "MERCER_PLATFORM=\"native\""],
+	"reason": { "react-jsx": 3 }
+}
+

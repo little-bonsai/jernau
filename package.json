@@ -1,0 +1,22 @@
+{
+  "name": "jernau",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@dusty-phillips/rescript-zora": "^3.0.1",
+    "@greenlabs/ppx-spice": "^0.1.6",
+    "@little-bonsai/licht": "^0.1.47",
+    "@little-bonsai/rescript-std": "^0.3.20",
+    "@rescript/react": "^0.10.3",
+    "@ryyppy/rescript-promise": "^2.1.0",
+    "inkjs": "^2.1.0",
+    "rescript": "^9.1.4",
+    "rescript-nodejs": "^14.2.1"
+  }
+}
