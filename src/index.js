@@ -48,7 +48,7 @@ async function main(args) {
       if ("out" in thing) {
         if (args["--silent"]) {
           lineBuffer.push(thing.out.trim());
-          lineBuffer = lineBuffer.slice(-10);
+          lineBuffer = lineBuffer.slice(-Math.sqrt(runs));
         } else {
           console.log(thing.out.trim());
         }
