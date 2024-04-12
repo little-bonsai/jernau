@@ -6,7 +6,7 @@ import pathLib from "path";
 import inkjs from "inkjs";
 const { Story } = inkjs;
 
-function* runOnce(args, storySource) {
+function* runOnce(args, validators, storySource) {
   const story = new Story(storySource);
   story.allowExternalFunctionFallbacks = true;
   let currentPathString = story.state.currentPathString;
@@ -15,7 +15,7 @@ function* runOnce(args, storySource) {
     while (story.canContinue || story.currentChoices.length !== 0) {
       currentPathString = story.state.currentPathString || currentPathString;
 
-      if (currentPathString === args["--done-path"]) {
+      if (validators.isDone(story)) {
         return;
       } else if (story.canContinue) {
         story.Continue();
@@ -33,9 +33,27 @@ function* runOnce(args, storySource) {
   } catch (fail) {
     yield { fail, story, currentPathString };
   }
+
+  if (validators.isDone(story)) {
+    return;
+  } else {
+    yield {
+      fail: "run out of content, but validators.isDone returned false",
+      story,
+      currentPathString,
+    };
+  }
 }
 
-async function main(args) {
+async function main(mainPath, args) {
+  if (!args["--ink"]) throw new Error("missing required argument: --ink");
+  if (!args["--validators"])
+    throw new Error("missing required argument: --validators");
+
+  const validators = await import(
+    pathLib.join(process.cwd(), args["--validators"])
+  );
+
   const storySource = await fs.readFile(args["--ink"], "utf8");
 
   let run = 0;
@@ -44,7 +62,7 @@ async function main(args) {
   let lineBuffer = [];
 
   outer: while (run++ < runs) {
-    for (const thing of runOnce(args, storySource)) {
+    for (const thing of runOnce(args, validators, storySource)) {
       if ("out" in thing) {
         if (args["--silent"]) {
           lineBuffer.push(thing.out.trim());
@@ -81,11 +99,11 @@ const argSpec = {
   "--version": Boolean,
   "--verbose": arg.COUNT, // Counts the number of times --verbose is passed
 
-  "--silent": Boolean,
-  "--ink": String,
   "--externals": String,
+  "--ink": String,
   "--itterations": Number,
-  "--done-path": String,
+  "--silent": Boolean,
+  "--validators": String,
 };
 
 function printHelp() {
@@ -102,8 +120,7 @@ Arguments:
         --version
         --verbose
     
-        --done-path      : Ink path that marks a successful end of the story
-        --externals      : Path to the js module that exports the required externals
+        --validators     : Path to the js module that exports the required validators
         --ink            : Path to the story.json file to run
         --itterations    : How many times to run
         --silent         : Do not print story output as it runs
@@ -112,4 +129,8 @@ Arguments:
   );
 }
 
-main(arg(argSpec, { permissive: true, argv: process.argv.slice(2) }));
+console.log(process.argv);
+main(
+  process.argv[1],
+  arg(argSpec, { permissive: true, argv: process.argv.slice(2) }),
+);
