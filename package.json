@@ -12,6 +12,7 @@
   "license": "ISC",
   "dependencies": {
     "arg": "^5.0.2",
-    "inkjs": "^2.2.2"
+    "inkjs": "^2.2.2",
+    "rescript": "^11.0.1"
   }
 }

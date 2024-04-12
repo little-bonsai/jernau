@@ -1,15 +1,18 @@
 #!/usr/bin/env node
 
 import arg from "arg";
-import * as fs from "fs/promises";
+import * as fs from "fs";
 import pathLib from "path";
 import inkjs from "inkjs";
+import { getIntRange, gen } from "./random.mjs";
 const { Story } = inkjs;
 
-function* runOnce(args, validators, storySource) {
+function* runOnce(args, validators, seed, storySource) {
   const story = new Story(storySource);
   story.allowExternalFunctionFallbacks = true;
   let currentPathString = story.state.currentPathString;
+  const rand = gen(seed);
+  story.state.storySeed = seed;
 
   try {
     while (story.canContinue || story.currentChoices.length !== 0) {
@@ -21,7 +24,7 @@ function* runOnce(args, validators, storySource) {
         story.Continue();
         yield { out: story.currentText };
       } else if (story.currentChoices.length > 0) {
-        const index = (Math.random() * story.currentChoices.length) | 0;
+        const index = getIntRange(0, story.currentChoices.length, gen());
 
         yield { out: story.currentChoices[index].text };
         story.ChooseChoiceIndex(index);
@@ -46,6 +49,7 @@ function* runOnce(args, validators, storySource) {
 }
 
 async function main(mainPath, args) {
+  if (args["--help"]) throw new Error("print help");
   if (!args["--ink"]) throw new Error("missing required argument: --ink");
   if (!args["--validators"])
     throw new Error("missing required argument: --validators");
@@ -53,8 +57,7 @@ async function main(mainPath, args) {
   const validators = await import(
     pathLib.join(process.cwd(), args["--validators"])
   );
-
-  const storySource = await fs.readFile(args["--ink"], "utf8");
+  const storySource = fs.readFileSync(args["--ink"], "utf8");
 
   let run = 0;
   const runs = args["--itterations"] || Math.sqrt(storySource.length) | 0;
@@ -62,19 +65,19 @@ async function main(mainPath, args) {
   let lineBuffer = [];
 
   outer: while (run++ < runs) {
-    for (const thing of runOnce(args, validators, storySource)) {
+    for (const thing of runOnce(args, validators, run, storySource)) {
       if ("out" in thing) {
-        if (args["--silent"]) {
+        if (args["--verbose"]) {
+          console.log(thing.out.trim());
+        } else {
           lineBuffer.push(thing.out.trim());
           lineBuffer = lineBuffer.slice(-Math.sqrt(runs));
-        } else {
-          console.log(thing.out.trim());
         }
       }
 
       if ("fail" in thing) {
         console.log("");
-        if (args["--silent"]) {
+        if (!args["--verbose"]) {
           console.log("...");
           console.log(lineBuffer.join("\n"));
           console.log("");
@@ -102,7 +105,6 @@ const argSpec = {
   "--externals": String,
   "--ink": String,
   "--itterations": Number,
-  "--silent": Boolean,
   "--validators": String,
 };
 
@@ -123,14 +125,19 @@ Arguments:
         --validators     : Path to the js module that exports the required validators
         --ink            : Path to the story.json file to run
         --itterations    : How many times to run
-        --silent         : Do not print story output as it runs
 `.trim(),
     "\n",
   );
 }
 
-console.log(process.argv);
-main(
-  process.argv[1],
-  arg(argSpec, { permissive: true, argv: process.argv.slice(2) }),
-);
+(async () => {
+  try {
+    await main(
+      process.argv[1],
+      arg(argSpec, { permissive: true, argv: process.argv.slice(2) }),
+    );
+  } catch (e) {
+    console.error(e);
+    printHelp();
+  }
+})();
