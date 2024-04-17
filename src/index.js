@@ -49,7 +49,7 @@ function* runOnce(args, validators, seed, storySource) {
 }
 
 async function main(mainPath, args) {
-  if (args["--help"]) throw new Error("print help");
+  if (args["--help"]) throw "print help";
   if (!args["--ink"]) throw new Error("missing required argument: --ink");
   if (!args["--validators"])
     throw new Error("missing required argument: --validators");
@@ -99,10 +99,8 @@ async function main(mainPath, args) {
 const argSpec = {
   // General
   "--help": Boolean,
-  "--version": Boolean,
   "--verbose": arg.COUNT, // Counts the number of times --verbose is passed
 
-  "--externals": String,
   "--ink": String,
   "--itterations": Number,
   "--validators": String,
