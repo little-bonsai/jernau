@@ -5,6 +5,7 @@ import * as fs from "fs";
 import pathLib from "path";
 import inkjs from "inkjs";
 import { getIntRange, gen } from "./random.mjs";
+import chalk from "chalk";
 const { Story } = inkjs;
 
 function* runOnce(args, validators, seed, storySource) {
@@ -22,29 +23,58 @@ function* runOnce(args, validators, seed, storySource) {
         return;
       } else if (story.canContinue) {
         story.Continue();
-        yield { out: story.currentText };
+        yield { kind: "text", out: story.currentText };
       } else if (story.currentChoices.length > 0) {
         const index = getIntRange(0, story.currentChoices.length, rand());
 
-        yield { out: story.currentChoices[index].text, index };
+        yield {
+          kind: "options",
+          out: story.currentChoices,
+          index,
+        };
         story.ChooseChoiceIndex(index);
-        story.Continue();
       } else {
-        yield { fail: 0, story, currentPathString };
+        yield { kind: "fail", fail: 0, story, currentPathString };
       }
     }
   } catch (fail) {
-    yield { fail, story, currentPathString };
+    yield { kind: "fail", fail, story, currentPathString };
   }
 
   if (validators.isDone(story)) {
     return;
   } else {
     yield {
+      kind: "fail",
       fail: "run out of content, but validators.isDone returned false",
       story,
       currentPathString,
     };
+  }
+}
+
+function printEvent(evt) {
+  switch (evt.kind) {
+    case "text": {
+      console.log(evt.out.trim());
+      return;
+    }
+
+    case "options": {
+      for (const i in evt.out) {
+        const option = evt.out[i];
+        if (i == evt.index) {
+          console.log(chalk.green(i.padStart(4, " "), "->", option.text));
+        } else {
+          console.log(chalk.blue(i.padStart(4, " "), "  ", option.text));
+        }
+      }
+      return;
+    }
+
+    default: {
+      console.log("I DON'T KNOW HOW TO PRINT THIS", evt);
+    }
   }
 }
 
@@ -65,34 +95,32 @@ async function main(mainPath, args) {
   let lineBuffer = [];
 
   outer: while (run++ < runs) {
-    for (const thing of runOnce(args, validators, run, storySource)) {
-      if ("out" in thing) {
-        if (args["--verbose"]) {
-          if ("index" in thing) {
-            console.log("choice", thing.index, ":", thing.out.trim());
-          } else {
-            console.log(thing.out.trim());
-          }
-        } else {
-          lineBuffer.push(thing.out.trim());
-          lineBuffer = lineBuffer.slice(-Math.sqrt(runs));
-        }
-      }
-
-      if ("fail" in thing) {
+    for (const evt of runOnce(args, validators, run, storySource)) {
+      if (evt.kind === "fail") {
         console.log("");
+
         if (!args["--verbose"]) {
-          console.log("...");
-          console.log(lineBuffer.join("\n"));
+          console.log(chalk.cyan("..."));
+          lineBuffer.map(printEvent);
           console.log("");
         }
 
-        console.log("fail", "@", thing.currentPathString);
-        if (thing.fail) {
-          console.log(thing.fail);
+        console.log(chalk.red("fail", "@", evt.currentPathString));
+
+        if (evt.fail) {
+          console.log(chalk.red(evt.fail));
         }
 
         break outer;
+      }
+
+      if (args["--verbose"]) {
+        printEvent(evt);
+      } else {
+        lineBuffer.push(evt);
+        lineBuffer = lineBuffer.slice(
+          -Math.sqrt(Math.sqrt(storySource.length)),
+        );
       }
     }
 
