@@ -24,9 +24,9 @@ function* runOnce(args, validators, seed, storySource) {
         story.Continue();
         yield { out: story.currentText };
       } else if (story.currentChoices.length > 0) {
-        const index = getIntRange(0, story.currentChoices.length, gen());
+        const index = getIntRange(0, story.currentChoices.length, rand());
 
-        yield { out: story.currentChoices[index].text };
+        yield { out: story.currentChoices[index].text, index };
         story.ChooseChoiceIndex(index);
         story.Continue();
       } else {
@@ -68,7 +68,11 @@ async function main(mainPath, args) {
     for (const thing of runOnce(args, validators, run, storySource)) {
       if ("out" in thing) {
         if (args["--verbose"]) {
-          console.log(thing.out.trim());
+          if ("index" in thing) {
+            console.log("choice", thing.index, ":", thing.out.trim());
+          } else {
+            console.log(thing.out.trim());
+          }
         } else {
           lineBuffer.push(thing.out.trim());
           lineBuffer = lineBuffer.slice(-Math.sqrt(runs));
