@@ -23,6 +23,12 @@ function* runOnce(args, validators, seed, storySource) {
         return;
       } else if (story.canContinue) {
         story.Continue();
+        if (
+          validators.lineValid &&
+          !validators.lineValid(story.currentText, story)
+        ) {
+          throw `"lineValid" did not pass on current line`;
+        }
         yield { kind: "text", out: story.currentText };
       } else if (story.currentChoices.length > 0) {
         const index = getIntRange(0, story.currentChoices.length, rand());
@@ -44,6 +50,7 @@ function* runOnce(args, validators, seed, storySource) {
   if (validators.isDone(story)) {
     return;
   } else {
+    yield { kind: "text", out: story.currentText };
     yield {
       kind: "fail",
       fail: "run out of content, but validators.isDone returned false",
@@ -78,6 +85,39 @@ function printEvent(evt) {
   }
 }
 
+function runForSeed({ seed, args, runs, validators, storySource }) {
+  let lineBuffer = [];
+
+  for (const evt of runOnce(args, validators, seed, storySource)) {
+    if (evt.kind === "fail") {
+      console.log("");
+
+      if (!args["--verbose"]) {
+        console.log(chalk.cyan("..."));
+        lineBuffer.map(printEvent);
+        console.log("");
+      }
+
+      console.log(chalk.red("fail", "@", evt.currentPathString));
+
+      if (evt.fail) {
+        console.log(chalk.red(evt.fail));
+      }
+
+      return;
+    }
+
+    if (args["--verbose"]) {
+      printEvent(evt);
+    } else {
+      lineBuffer.push(evt);
+      lineBuffer = lineBuffer.slice(-Math.sqrt(Math.sqrt(storySource.length)));
+    }
+  }
+
+  console.log(seed.toString().padStart(6, " ") + "/" + runs.toString());
+}
+
 async function main(mainPath, args) {
   if (args["--help"]) throw "print help";
   if (!args["--ink"]) throw new Error("missing required argument: --ink");
@@ -89,42 +129,21 @@ async function main(mainPath, args) {
   );
   const storySource = fs.readFileSync(args["--ink"], "utf8");
 
-  let run = 0;
-  const runs = args["--itterations"] || Math.sqrt(storySource.length) | 0;
+  if (args["--seed"]) {
+    runForSeed({
+      seed: args["--seed"],
+      args,
+      runs: 1,
+      validators,
+      storySource,
+    });
+  } else {
+    let seed = 0;
+    const runs = args["--itterations"] || Math.sqrt(storySource.length) | 0;
 
-  let lineBuffer = [];
-
-  outer: while (run++ < runs) {
-    for (const evt of runOnce(args, validators, run, storySource)) {
-      if (evt.kind === "fail") {
-        console.log("");
-
-        if (!args["--verbose"]) {
-          console.log(chalk.cyan("..."));
-          lineBuffer.map(printEvent);
-          console.log("");
-        }
-
-        console.log(chalk.red("fail", "@", evt.currentPathString));
-
-        if (evt.fail) {
-          console.log(chalk.red(evt.fail));
-        }
-
-        break outer;
-      }
-
-      if (args["--verbose"]) {
-        printEvent(evt);
-      } else {
-        lineBuffer.push(evt);
-        lineBuffer = lineBuffer.slice(
-          -Math.sqrt(Math.sqrt(storySource.length)),
-        );
-      }
+    outer: while (seed++ < runs) {
+      runForSeed({ seed, args, runs, validators, storySource });
     }
-
-    console.log(run.toString().padStart(6, " ") + "/" + runs.toString());
   }
 }
 
@@ -135,6 +154,7 @@ const argSpec = {
 
   "--ink": String,
   "--itterations": Number,
+  "--seed": Number,
   "--validators": String,
 };
 
@@ -152,9 +172,10 @@ Arguments:
         --version
         --verbose
     
-        --validators     : Path to the js module that exports the required validators
         --ink            : Path to the story.json file to run
         --itterations    : How many times to run
+        --seed           : run a single seeded playthrough
+        --validators     : Path to the js module that exports the required validators
 `.trim(),
     "\n",
   );
