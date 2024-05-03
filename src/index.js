@@ -104,7 +104,7 @@ function runForSeed({ seed, args, runs, validators, storySource }) {
         console.log(chalk.red(evt.fail));
       }
 
-      return;
+      return true;
     }
 
     if (args["--verbose"]) {
@@ -141,8 +141,10 @@ async function main(mainPath, args) {
     let seed = 0;
     const runs = args["--itterations"] || Math.sqrt(storySource.length) | 0;
 
-    outer: while (seed++ < runs) {
-      runForSeed({ seed, args, runs, validators, storySource });
+    while (seed++ < runs) {
+      if (runForSeed({ seed, args, runs, validators, storySource })) {
+        break;
+      }
     }
   }
 }
