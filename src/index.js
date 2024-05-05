@@ -23,11 +23,13 @@ function* runOnce(args, validators, seed, storySource) {
         return;
       } else if (story.canContinue) {
         story.Continue();
-        if (
-          validators.lineValid &&
-          !validators.lineValid(story.currentText, story)
-        ) {
-          throw `"lineValid" did not pass on current line`;
+        if (validators.lineValid) {
+          const validation = validators.lineValid(story.currentText, story);
+          const { isValid, msg } = validation;
+          if (!isValid) {
+            yield { kind: "text", out: story.currentText };
+            throw msg;
+          }
         }
         yield { kind: "text", out: story.currentText };
       } else if (story.currentChoices.length > 0) {
@@ -40,10 +42,12 @@ function* runOnce(args, validators, seed, storySource) {
         };
         story.ChooseChoiceIndex(index);
       } else {
+        yield { kind: "text", out: story.currentText };
         yield { kind: "fail", fail: 0, story, currentPathString };
       }
     }
   } catch (fail) {
+    yield { kind: "text", out: story.currentText };
     yield { kind: "fail", fail, story, currentPathString };
   }
 
