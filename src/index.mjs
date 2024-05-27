@@ -3,10 +3,9 @@
 import arg from "arg";
 import * as fs from "fs";
 import pathLib from "path";
-import inkjs from "inkjs";
+import { Story } from "inkjs/dist/ink-es6.mjs";
 import { getIntRange, gen } from "./random.mjs";
 import chalk from "chalk";
-const { Story } = inkjs;
 
 function* runOnce(args, validators, seed, storySource) {
   const story = new Story(storySource);
