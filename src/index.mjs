@@ -3,7 +3,7 @@
 import arg from "arg";
 import * as fs from "fs";
 import pathLib from "path";
-import { Story } from "inkjs/dist/ink-es6.mjs";
+import { Story } from "inkjs";
 import { getIntRange, gen } from "./random.mjs";
 import chalk from "chalk";
 
