@@ -7,8 +7,13 @@ import { Story } from "inkjs";
 import { getIntRange, gen } from "./random.mjs";
 import chalk from "chalk";
 
-function* runOnce(args, validators, seed, storySource) {
+function* runOnce({ validators, externals, seed, storySource }) {
   const story = new Story(storySource);
+
+  for (const [key, fn] of Object.entries(externals)) {
+    story.BindExternalFunction(key, fn, false);
+  }
+
   story.allowExternalFunctionFallbacks = true;
   let currentPathString = story.state.currentPathString;
   const rand = gen(seed);
@@ -88,10 +93,16 @@ function printEvent(evt) {
   }
 }
 
-function runForSeed({ seed, args, runs, validators, storySource }) {
+function runForSeed({ seed, args, runs, validators, storySource, externals }) {
   let lineBuffer = [];
 
-  for (const evt of runOnce(args, validators, seed, storySource)) {
+  for (const evt of runOnce({
+    args,
+    validators,
+    seed,
+    storySource,
+    externals,
+  })) {
     if (evt.kind === "fail") {
       console.log("");
 
@@ -130,6 +141,10 @@ async function main(mainPath, args) {
   const validators = await import(
     pathLib.join(process.cwd(), args["--validators"])
   );
+  const externals = args["--externals"]
+    ? await import(pathLib.join(process.cwd(), args["--externals"]))
+    : {};
+
   const storySource = fs.readFileSync(args["--ink"], "utf8");
 
   if (args["--seed"]) {
@@ -138,6 +153,7 @@ async function main(mainPath, args) {
       args,
       runs: 1,
       validators,
+      externals,
       storySource,
     });
   } else {
@@ -145,7 +161,9 @@ async function main(mainPath, args) {
     const runs = args["--itterations"] || Math.sqrt(storySource.length) | 0;
 
     while (seed++ < runs) {
-      if (runForSeed({ seed, args, runs, validators, storySource })) {
+      if (
+        runForSeed({ seed, args, runs, validators, storySource, externals })
+      ) {
         break;
       }
     }
@@ -161,6 +179,7 @@ const argSpec = {
   "--itterations": Number,
   "--seed": Number,
   "--validators": String,
+  "--externals": String,
 };
 
 function printHelp() {
@@ -181,6 +200,7 @@ Arguments:
         --itterations    : How many times to run
         --seed           : run a single seeded playthrough
         --validators     : Path to the js module that exports the required validators
+        --externals      : Optional path to a js module that exports external functions by name
 `.trim(),
     "\n",
   );

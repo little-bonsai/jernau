@@ -1,0 +1,13 @@
+build "main.mjs" {
+  from "src/index.mjs"
+  from glob "src/*.mjs"
+  run "esbuild --bundle --platform=node --format=esm --outfile=<out> <in>"
+}
+
+task publish {
+  build "main.mjs"
+  run "git diff-index --quiet HEAD" #check for non-empty dir
+  run "npm version patch"
+  run "git push"
+  run "npm publish"
+}
