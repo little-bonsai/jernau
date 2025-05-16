@@ -1,11 +1,24 @@
-build "main.mjs" {
-  from "src/index.mjs"
+build "src/Main.mjs"{
+  run "rescript"
+}
+
+build "bin.mjs" {
+  from "src/Main.mjs"
   from glob "src/*.mjs"
-  run "esbuild --bundle --platform=node --format=esm --outfile=<out> <in>"
+  run "esbuild --bundle --platform=node --format=esm --outfile=<out> ./src/Main.mjs"
+}
+
+task rescript {
+  run "npx rescript"
+}
+
+task build {
+  run "rescript"
+  build "bin.mjs"
 }
 
 task publish {
-  build "main.mjs"
+  build "bin.mjs"
   run "git diff-index --quiet HEAD" #check for non-empty dir
   run "npm version patch"
   run "git push"

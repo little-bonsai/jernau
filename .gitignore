@@ -1,3 +1,5 @@
 node_modules
 story.json
 target
+lib
+src/*.mjs

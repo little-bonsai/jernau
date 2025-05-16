@@ -1,0 +1,8 @@
+{
+  "name": "jernau",
+  "suffix": ".mjs",
+  "package-specs": { "module": "esmodule", "in-source": true },
+
+  "sources": [{ "dir": "src", "subdirs": true }],
+  "bs-dependencies": ["@rescript/core"]
+}
