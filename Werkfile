@@ -5,7 +5,7 @@ build "src/Main.mjs"{
 build "bin.mjs" {
   from "src/Main.mjs"
   from glob "src/*.mjs"
-  run "esbuild --bundle --platform=node --format=esm --outfile=<out> ./src/Main.mjs"
+  run "esbuild --banner:js='#!/usr/bin/env node' --bundle --platform=node --format=esm --outfile=<out> ./src/Main.mjs"
 }
 
 task rescript {
