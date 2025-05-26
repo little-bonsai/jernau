@@ -22,6 +22,7 @@ module Raw = {
     @as("--ink") ink: Js.Nullable.t<string>,
     @as("--validators") validators: Js.Nullable.t<string>,
     @as("--externals") externals: Js.Nullable.t<string>,
+    @as("--timeout") timeout: Js.Nullable.t<int>,
   }
 
   @module("arg") external run: (Js.Dict.t<Config.t>, options) => t = "default"
@@ -36,6 +37,7 @@ module Parsed = {
     validators: option<string>,
     ink: option<string>,
     externals: option<string>,
+    timeout: option<int>,
   }
 
   let make = (raw: Raw.t): t => {
@@ -46,6 +48,7 @@ module Parsed = {
     ink: raw.ink->Js.Nullable.toOption,
     validators: raw.validators->Js.Nullable.toOption,
     externals: raw.externals->Js.Nullable.toOption,
+    timeout: raw.timeout->Js.Nullable.toOption,
   }
 }
 
@@ -59,6 +62,7 @@ let get = argv => {
       ("--ink", Config.string_),
       ("--validators", Config.string_),
       ("--externals", Config.string_),
+      ("--timeout", Config.number),
     ]),
     {permissive: true, argv},
   )->Parsed.make

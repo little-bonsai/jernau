@@ -5,4 +5,5 @@ type t =
       externalsPath: option<string>,
       seed: int,
       maxBufferLength: option<int>,
+      timeout: option<int>,
     })

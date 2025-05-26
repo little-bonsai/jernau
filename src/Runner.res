@@ -4,7 +4,7 @@ let main = async (msg: Msg.t): (Evt.t, int, array<Buffer.t>) => {
   let textBuffer: array<Buffer.t> = []
 
   switch msg {
-  | Run({inkPath, validatorsPath, externalsPath, seed, maxBufferLength}) =>
+  | Run({inkPath, validatorsPath, externalsPath, seed, maxBufferLength, timeout}) =>
     try {
       let (inkSrc, validators, externals) = await RescriptCore.Promise.all3((
         Fs.readFile(inkPath, "utf8"),
@@ -33,61 +33,68 @@ let main = async (msg: Msg.t): (Evt.t, int, array<Buffer.t>) => {
       let rand = Random.gen(~seed, ())
       story->Ink.getState->Ink.State.setStorySeed(seed)
 
+      let startTime = Js.Date.now()->Float.toInt
       let rec do = (): (Evt.t, int, array<Buffer.t>) => {
-        switch maxBufferLength {
-        | None => ()
-        | Some(maxBufferLength) =>
-          while textBuffer->Array.length > maxBufferLength {
-            let _ = textBuffer->Array.shift
-          }
-        }
-
-        switch story {
-        | story if story->Ink.canContinue => {
-            story->Ink.continue
-            textBuffer->Array.push(Text(story->Ink.currentText))
-
-            switch validators["lineValid"]->Js.Nullable.toOption {
-            | None => do()
-            | Some(lineValid) =>
-              if lineValid(story->Ink.currentText, story) {
-                do()
-              } else {
-                (
-                  InvalidLine({
-                    currentPathString: currentPathString.contents,
-                  }),
-                  seed,
-                  textBuffer,
-                )
+        let now = Js.Date.now()->Float.toInt
+        switch timeout {
+        | Some(timeout) if now - startTime > timeout => (Evt.Timeout, seed, textBuffer)
+        | _ => {
+            switch maxBufferLength {
+            | None => ()
+            | Some(maxBufferLength) =>
+              while textBuffer->Array.length > maxBufferLength {
+                let _ = textBuffer->Array.shift
               }
             }
+
+            switch story {
+            | story if story->Ink.canContinue => {
+                story->Ink.continue
+                textBuffer->Array.push(Text(story->Ink.currentText))
+
+                switch validators["lineValid"]->Js.Nullable.toOption {
+                | None => do()
+                | Some(lineValid) =>
+                  if lineValid(story->Ink.currentText, story) {
+                    do()
+                  } else {
+                    (
+                      InvalidLine({
+                        currentPathString: currentPathString.contents,
+                      }),
+                      seed,
+                      textBuffer,
+                    )
+                  }
+                }
+              }
+
+            | story if story->Ink.currentChoices->Array.length > 0 => {
+                let idx =
+                  rand()->Random.getIntRange(~min=0, ~max=story->Ink.currentChoices->Array.length)
+
+                textBuffer->Array.push(
+                  Options({
+                    choices: story->Ink.currentChoices->Array.map(Ink.Choice.text),
+                    chosen: idx,
+                  }),
+                )
+
+                story->Ink.chooseChoiceIndex(Ink.Choice.ChoiceIndex(idx))
+                do()
+              }
+
+            | story if validators["isDone"](story) => (Done, seed, textBuffer)
+
+            | _ => (
+                NotDone({
+                  currentPathString: currentPathString.contents,
+                }),
+                seed,
+                textBuffer,
+              )
+            }
           }
-
-        | story if story->Ink.currentChoices->Array.length > 0 => {
-            let idx =
-              rand()->Random.getIntRange(~min=0, ~max=story->Ink.currentChoices->Array.length)
-
-            textBuffer->Array.push(
-              Options({
-                choices: story->Ink.currentChoices->Array.map(Ink.Choice.text),
-                chosen: idx,
-              }),
-            )
-
-            story->Ink.chooseChoiceIndex(Ink.Choice.ChoiceIndex(idx))
-            do()
-          }
-
-        | story if validators["isDone"](story) => (Done, seed, textBuffer)
-
-        | _ => (
-            NotDone({
-              currentPathString: currentPathString.contents,
-            }),
-            seed,
-            textBuffer,
-          )
         }
       }
 

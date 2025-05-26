@@ -6,13 +6,14 @@ let main = async () => {
       validators: Some(validatorsPath),
       seed: Some(seed),
       externals: externalsPath,
+      timeout,
     } => {
       let validatorsPath = Path.join([Process.cwd(), validatorsPath])
       let externalsPath =
         externalsPath->Option.map(externalsPath => Path.join([Process.cwd(), externalsPath]))
 
       let (output, _, buffer) = await Runner.main(
-        Msg.Run({inkPath, validatorsPath, seed, externalsPath, maxBufferLength: None}),
+        Msg.Run({inkPath, validatorsPath, seed, externalsPath, maxBufferLength: None, timeout}),
       )
 
       buffer->Array.map(Buffer.print)->Array.join("\n")->Js.log
@@ -26,6 +27,7 @@ let main = async () => {
       validators: Some(validatorsPath),
       itterations,
       externals: externalsPath,
+      timeout,
     } => {
       let inkSrc = await Fs.readFile(inkPath, "utf8")
       let sqrtInkLen = inkSrc->String.length->Int.toFloat->Js.Math.sqrt->Float.toInt
@@ -46,6 +48,7 @@ let main = async () => {
             seed,
             externalsPath,
             maxBufferLength: Some(sqrtInkLen->Int.toFloat->Js.Math.sqrt->Float.toInt),
+            timeout,
           }),
         )
 
@@ -92,9 +95,10 @@ Arguments:
     
         --ink            : Path to the story.json file to run
         --itterations    : How many times to run
-        --seed           : run a single seeded playthrough
+        --seed           : Run a single seeded playthrough
         --validators     : Path to the js module that exports the required validators
         --externals      : Optional path to a js module that exports external functions by name
+        --timeout        : Timeout for a playthrough, omit to run unbounded
 `)
 
       Js.log(err)
