@@ -1,6 +1,6 @@
 {
   "name": "@little-bonsai/jernau",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "description": "",
   "type": "module",
   "main": "target/bin.mjs",
