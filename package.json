@@ -3,9 +3,9 @@
   "version": "0.1.6",
   "description": "",
   "type": "module",
-  "main": "target/main.mjs",
+  "main": "target/bin.mjs",
   "bin": {
-    "jernau": "target/main.mjs"
+    "jernau": "target/bin.mjs"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
